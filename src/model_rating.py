@@ -7,7 +7,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 import numpy as np
 from sklearn.decomposition import PCA
-
+#todo: train randomForestRegresser, try XGBoost
 
 from src.regression_models.Linear_regression import MultipleLinearRegression
 from src.regression_models.Regression_tree import RegressionTree
@@ -97,7 +97,7 @@ R2: 0.019531022148843724"""
 y_test mean: 3.8583516483516482
 predicting values clustered around the mean -
 which is what a weak linear model does when it can't find strong signal"""
-#todo: export data about prediction and actual y - soem kind of visualization
+#todo: visualization of the ecart entre y - y_pred
 
 
 #---Regression tree model---
@@ -170,3 +170,4 @@ depth=10 RMSE=0.4867 R2=-0.2592
 depth=15 RMSE=0.5376 R2=-0.5366
 depth=20 RMSE=0.5623 R2=-0.6808
 a little bit better"""
+
