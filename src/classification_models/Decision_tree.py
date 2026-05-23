@@ -16,11 +16,13 @@ class Node:
 
     def is_leaf(self):
         return self.value is not None
+    def value(self):
+        return self.value
 
 
-class RegressionTree:
+class DecisionTree:
     """
-    A decision tree for regression problems.
+    A decision tree classifier for binary classification problems.
     """
 
     def __init__(self, min_samples_split=2, max_depth=100, n_features=None, random_forest=-1):
@@ -36,10 +38,12 @@ class RegressionTree:
 
     def grow_tree(self, X, y, current_depth=0, random_forest=-1):
         n_samples, n_features = X.shape
+        n_labels = len(np.unique(y))
 
         #check the stopping condition
         if n_samples < self.min_samples_split or current_depth >= self.max_depth:
-            leaf_value = np.mean(y)
+            #create a leaf node
+            leaf_value = self.most_common_label(y)
             return Node(value=leaf_value)
 
         #find the best split
@@ -47,19 +51,23 @@ class RegressionTree:
         if random_forest != -1:
             feature_idxs = np.random.choice(n_features, self.n_features, replace=False)
 
-        #find the best split
         best_threshold, best_feature = self.best_split(X, y, feature_idxs=feature_idxs)
 
         #create child node
-        I1 = X[:,best_feature] <= best_threshold  # left
-        I2 = X[:,best_feature] > best_threshold  # right
-        X1 = X[I1,:]
-        X2 = X[I2,:]
-        left = self.grow_tree(X1, y[I1], current_depth + 1, random_forest)
-        right = self.grow_tree(X2, y[I2], current_depth + 1, random_forest)
+        left_idxs = X[:,best_feature] <= best_threshold  # left
+        right_idxs = X[:,best_feature] > best_threshold  # right
+        left_X = X[left_idxs,:]
+        right_X = X[right_idxs,:]
+        left = self.grow_tree(left_X, y[left_idxs], current_depth + 1, random_forest)
+        right = self.grow_tree(right_X, y[right_idxs], current_depth + 1, random_forest)
 
         return Node(feature=best_feature, threshold=best_threshold, left=left, right=right)
 
+    def most_common_label(self, y):
+        """Calculate the most occurring value in the given list of y"""
+        y = list(y)
+        most_common = max(y, key=lambda x: y.count(x))
+        return most_common
 
 
         #create children
@@ -73,7 +81,7 @@ class RegressionTree:
                 X_column = X[:, feature]
                 for threshold in thresholds:
                     #the information gain
-                    gain = self.variance_reduction(y, X_column, threshold)
+                    gain = self.information_gain(y, X_column, threshold)
                     if gain > best_gain:
                         best_gain = gain
                         best_feature = feature
@@ -85,8 +93,8 @@ class RegressionTree:
                 X_column = X[:, feature_idx]
                 thresholds = np.unique(X[:, feature_idx])
                 for threshold in thresholds:
-                    # the information gain
-                    gain = self.variance_reduction(y, X_column, threshold)
+                    # calculate the information gain
+                    gain = self.information_gain(y, X_column, threshold)
                     if gain > best_gain:
                         best_gain = gain
                         best_feature = feature_idx
@@ -95,23 +103,44 @@ class RegressionTree:
 
         return best_thresh, best_feature
 
-    def variance_reduction(self, y, X_column, threshold):
-        I1 = X_column <= threshold
-        I2 = X_column > threshold
+    def information_gain(self, y, X_column, threshold):
+        # entropy of parent
+        parent_entropy = self.entropy(y)
 
-        if len(y[I1]) == 0 or len(y[I2]) == 0:
+        # create children
+        left_idxs =np.argwhere(X_column<= threshold)  # left
+        right_idxs = np.argwhere(X_column > threshold)  # right
+
+        if len(left_idxs) == 0 or len(right_idxs) == 0:
             return 0
 
+        # calculate weighted avg. entropy of children
         n = len(y)
-        n_l, n_r = len(y[I1]), len(y[I2])
+        n_l = len(left_idxs)
+        n_r = len(right_idxs)
+        #entropy of children
+        e_l, e_r = self.entropy(y[left_idxs]), self.entropy(y[right_idxs])
+        children_entropy = (n_l/n) * e_l + (n_r/n) * e_r
 
-        parent_var = np.var(y)
-        left_var = np.var(y[I1])
-        right_var = np.var(y[I2])
+        #calculate information gain
+        IG = parent_entropy - children_entropy
+        return IG
 
-        return parent_var - (n_l / n) * left_var - (n_r / n) * right_var
+    def entropy(self, y):
+        """"""
+        entropy = 0
 
+        # Find the unique label values in y and loop over each value
+        labels = np.unique(y)
+        for label in labels:
+            # Find the examples in y that have the current label
+            label_examples = y[y == label]
+            # Calculate the ratio of the current label in y
+            pl = len(label_examples) / len(y)
+            # Calculate the entropy using the current label and ratio
+            entropy += -pl * np.log2(pl)
 
+        return entropy
 
     def predict(self, X):
         return np.array([self.traverse_tree(x, self.root) for x in X])
@@ -119,7 +148,7 @@ class RegressionTree:
 
     def traverse_tree(self, x, node):
         if node.is_leaf():
-            return node.value
+            return node.value()
 
         if x[node.feature] <= node.threshold:
             return self.traverse_tree(x, node.left)
