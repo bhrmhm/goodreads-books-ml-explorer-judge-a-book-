@@ -13,8 +13,7 @@ from src.data_loader import load_books
 #https://www.kaggle.com/code/uthamkanth/beginner-tf-idf-and-cosine-similarity-from-scratch
 
 query = "A mystery murder in an inn/hotel" #Users input
-nltk.download('stopwords')
-nltk.download('punkt') #TODO didn't use it yet
+
 
 DIR = '/Users/bahar/Documents/Projects/Books_geek/resources'
 df_books = load_books(os.path.join(DIR, 'goodreads_cleaned_7000.parquet'))
